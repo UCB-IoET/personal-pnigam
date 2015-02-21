@@ -1,6 +1,6 @@
 require "cord" -- scheduler / fiber library
 TMP006 = require "tmp006"
---LCD = require "lcd"
+LCD = require "lcd"
 
 local buzzer = storm.io.D2
 local led = storm.io.D3
@@ -21,7 +21,7 @@ local service_count = 1
 service_table = {}
 service_table.id = "a"
 service_table.desc = "SERVICE"
-service_table.getTemp = {s = "subscribeToTemp", desc = "temp", service_type = {"student"} }
+--service_table.getTemp = {s = "subscribeToTemp", desc = "temp", service_type = {"student"} }
 
 local services = {}
 services[1] = "getTemp"
@@ -30,9 +30,9 @@ services[3] = "setLights"
 services[4] = "dispString"
 services[5] = "setRelay"
 local service_messages = {
-    getTemp = {s = "subscribeToTemp", desc = "temp", service_type = {"student"} },
+    getTemp = {s = "subscribeToTemp", desc = "temp", service_type = {"student", "prof"} },
     dispString = {s = "lcdDisp", desc = "lcd", service_type = {"student"} },
-    setLights = {s = "setLed", desc = "led", service_type = {"student"} },
+    setLights = {s = "setLed", desc = "led", service_type = {"student", "prof", "staff"} },
     setRelay = {s = "setRelay", desc = "relay", service_type = {"student"} },
     playSong = {s = "setBuzzer", desc = "buzzer", service_type = {"student"} },
 }
@@ -47,13 +47,13 @@ end
 function lcd_setup()
     lcd = LCD.new(storm.i2c.EXT, 0x7c, storm.i2c.EXT, 0xc4)
 end
---[[
+
 write_to_screen = function(str)
     cord.new(function ()
         lcd.init(2, 1)
         lcd.writeString(str)
     end)
-end	]]--
+end
 
 function set_led(value)
     storm.io.set(value,led)
@@ -88,7 +88,9 @@ service_listen = function()
                       resp.id = service_table.id
                       resp.payload = ""
                       if (msg.name == "dispString") then 
-                          write_to_screen(msg.args[1]) 
+                          write_to_screen(msg.args[1])
+                          resp.payload = "SUCCESS"
+                          service_respond(storm.mp.pack(resp))
                       elseif (msg.name == "setLights") then 
                           set_led(tonumber(msg.args[1]))
                           resp.payload = "SUCCESS"
@@ -139,7 +141,7 @@ ping_listen = function()
 			      end)
 end]]--
 
---lcd_setup()
+lcd_setup()
 temp_setup()
 ack_listen()
 broadcast_handle = storm.os.invokePeriodically(500*storm.os.MILLISECOND, service_broadcast)
